@@ -1,0 +1,28 @@
+## File to pass parameters for experiments
+
+data: 'data/minimal_example/hands'
+data_mode: {'onfly': True, 'nb': 5000, 'set': 'data/minimal_example/hands/images', 'augment': [True, False]}
+num_experiments: 1
+epochs: [1]
+loss: ['MSE', 'deform']
+model: 'LSTMNet'
+num_layer: 1
+normalize: True
+freeze: [False, 30, True]
+ML_training: False
+learning_rates: [0.001]
+lr_restart: False
+# param is used by some Scheduler types and differs widly (if in doubt look up type in pytorch doc)
+scheduler: {'mode': False, 'name': 'StepLR', 'param': [30, 0.5, -1]}
+batch_sizes: [25]
+num_solver_steps: [1]
+objective: ['PIR', 'affine']
+ML_flag: True
+solver_name: 'BFGS'
+solver_set: {'bfgs_params': [5, 0.0, True], 'ml_max_lvl': 7}
+solver_reg:  ['None' , 0.01]
+test_iter: 30
+verbose: False
+device: [0]
+seed: 107
+name_csv: 'ov_experiments.csv'

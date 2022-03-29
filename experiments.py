@@ -43,9 +43,7 @@ def do_run(settings):
                   'Model': settings['model'],
                   'num_layer': settings['num_layer'],
                   'normalize': settings['normalize'],
-                  'regularize': settings['regularize'],
                   'freeze': str(settings['freeze'][0]) + '_' + str(settings['freeze'][1]) + '_' + str(settings['freeze'][2]),
-                  'grad_norm': str(settings['grad_norm'][0]) + '_' + str(settings['grad_norm'][1]),
                   'ML_model': settings['ML_training'],
                   'Loss': settings['loss'][1] + '_' + settings['loss'][0],
                   'Iterations': soltmp.iter.copy(),
@@ -132,9 +130,14 @@ def do_experiments(input_params):
     solver_name = input_params['solver_name']
     solver_settings = input_params['solver_set']
 
+    # adaption GitHub (data should be placed in same dir as files)
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    input_params['data'] = os.path.join(dir_path, input_params['data'])
+    input_params['data_mode']['set'] = os.path.join(dir_path, input_params['data_mode']['set'])
+
     for k in range(num_experiments):
         # ---------------- Setup ---------------------------------------
-        with h5py.File(os.path.join(input_params['data'], 'train.h5'), 'r') as fp:
+        with h5py.File(os.path.join(input_params['data'], 'test.h5'), 'r') as fp:
             m = torch.tensor(fp['T'][0].shape)
 
         # setup for network hyperparameters
@@ -159,7 +162,9 @@ def do_experiments(input_params):
         # params for inner objective (registration)
         soltmp = set_solver(solver_name, iterations, ml_flag=enable_ml, **solver_settings)
 
-        run_settings = {'results': '/results',
+        # also adapted for GitHub, mapping of '/data' and '/results' dirs preferable
+        # write output to users home dir
+        run_settings = {'results': os.path.join(os.path.expanduser('~'), 'MLMIR_toolbox', 'Results'),
                         'solver': soltmp,
                         'objFct': fcn,
                         'deformation': deform.set_deformation(def_type, m.numel()),
