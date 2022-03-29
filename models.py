@@ -172,7 +172,7 @@ class LSTMNetBlock(nn.Module):
         self.init_weigths()
 
     def init_weigths(self):
-        # Initialize weights and bias so that first update is identity mapping
+        # Initialize weights and bias so that first update is close to identity mapping
         for name, param in self.lstm_in.named_parameters():
             if 'bias' in name:
                 # set hidden bias to small values to force first step to result in minor update
@@ -415,7 +415,6 @@ class ML_MetaNet(BaseNet):
                 fx, gx = self._eval_func(x_k, **lvl_params)
                 xk_list, gk_list, fk_list = self._expand_list(x_k, gx, fx, xk_list, gk_list, fk_list, timed=timed)
                 x = self._prepare_input(x_k, gx, fx)
-
 
         xk_out = xk_list.copy()
         xk_list.clear()

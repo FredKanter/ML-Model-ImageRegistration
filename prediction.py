@@ -2,25 +2,16 @@ import torch
 from torch.utils import data
 import os
 import copy
-import math
-import h5py
-import dill
 import time
-import numpy as np
 from collections import OrderedDict
-import itertools
 
-from preprocessing_cg.setup_data import HdfDataset
-from image_registration.models_reg import init_model, MyDataParallel
-import image_registration.reg_utils.tools as tools
-from image_registration.loss_func import set_loss
-import image_registration.reg_utils.grids as gutils
-from image_registration.reg_utils.optimization import set_solver
-from image_registration.reg_utils.grids import Grid
-import image_registration.reg_utils.deformations as df
-from image_registration.reg_utils.visualization import surface_grid
+from setup_data import HdfDataset
+from models import MyDataParallel
+import tools as tools
+from loss import set_loss
+import grids as gutils
+import deformations as df
 
-from save_results import write_file, save_to_disk
 import batch_calculation as bc
 
 
@@ -77,7 +68,6 @@ def predict(model, solver_obj, params, dataset='test.h5', combined=False, noise=
     # also return reference images for visualization
     lst_full = time.time()
     lst_instance, let_instance, cet_instance = [], [], []
-    count_idx = 0
     for w, adds in test_gen:
         with torch.no_grad():
             w = w.to(params['device'])
@@ -97,13 +87,6 @@ def predict(model, solver_obj, params, dataset='test.h5', combined=False, noise=
 
             # learn solver. Calculate Distances / check loss for all iterates
             iterates_learn, loss_learn, fx_learn, fx_all_learn, let_instance = prepare_metrics(wk, fks, iterates_learn, loss_learn, fx_learn, fx_all_learn, let_instance, fct_loss, objFct, adds, npir_mode)
-
-            # visualize u (gt_xc - pred_xc) in npir mode / per sample and only for learned to evaluate problems npir
-            if npir_mode:
-                visualize_u(wk[-1], adds['x*'], copy.copy(objFct), lobj, grid_plots_path, count_idx)
-
-            # increase count for solver protocol
-            count_idx += 1
 
     learn_time = tools.calc_time(lst_full, time.time())
     learn_its = time_per_instance(lst_instance, let_instance)
@@ -153,21 +136,6 @@ def predict(model, solver_obj, params, dataset='test.h5', combined=False, noise=
         out['cInstance_energy'] = torch.tensor(fx_all_combined)
 
     return out
-
-
-def visualize_u(wk, wmin, objfct, loss_fct, path, sample_id):
-    rep = lambda ex, bs: list(itertools.chain.from_iterable(itertools.repeat(x, bs) for x in [ex]))
-    xcs = objfct.gridRef.clone().squeeze().repeat(wk.shape[0], 1, 1)
-    omega = objfct.omega.repeat(wk.shape[0], 1)
-    deformation = rep(objfct.dist.trafo, wk.shape[0])
-
-    gt_grid = bc.batch_apply(deformation, wmin, xcs.shape, xcs, omega)
-    pred_grid = bc.batch_apply(deformation, wk, xcs.shape, xcs, omega)
-
-    fig_surf, fig_heat = surface_grid(gt_grid, pred_grid, objfct.h, loss_fct.obj)
-
-    save_to_disk(fig_surf, f'u_{sample_id:04d}_surf', path)
-    save_to_disk(fig_heat, f'u_{sample_id:04d}_heat', path)
 
 
 def time_per_instance(start_times, end_times):

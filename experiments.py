@@ -10,13 +10,13 @@ from optimization import set_solver
 import deformations as deform
 import tools as tools
 from grids import Grid
-from distances import set_distance, SSD, NGF
+from distances import set_distance, SSD
 from regularizer import set_regularizer
 from objectives import ObjectiveFunction
 from save_results import write_file
 from writer_csv import to_csv
-from prediction_reg import predict
-from training_reg import train
+from prediction import predict
+from training import train
 
 
 def do_run(settings):
@@ -35,7 +35,7 @@ def do_run(settings):
 
     print(f"---- results path: {res_path} ----")
 
-    # save objective function later needed in visualizing results
+    # save objective function later needed visualizing results
     with open(os.path.join(res_path, 'objective'), 'wb') as dill_file:
         dill.dump(obj_fctn, dill_file)
 
@@ -69,27 +69,13 @@ def do_run(settings):
         parameters['numBFGSVec'] = soltmp.maxBFGS
         parameters['LR-BFGS'] = soltmp.lr
         parameters['LineSearch'] = soltmp.LS
-    if settings['snapshot'][0]:
-        parameters['Snapshot'] = settings['snapshot'][-1]
     write_file(parameters, 'parameters', res_path)
 
-    # make dir for checkpoints to use best model for testing later on
+    # make dir for checkpoints
     dir_checkpoints = os.path.join(res_path, 'checkpoints')
     if not os.path.isdir(dir_checkpoints):
         os.makedirs(dir_checkpoints)
     train_params['dir_checkpoints'] = dir_checkpoints
-
-    # make dir for solver history plots
-    dir_his = os.path.join(res_path, 'solver_history')
-    if not os.path.exists(dir_his) and settings['verbose']:
-        os.makedirs(dir_his)
-    train_params['dir_his'] = dir_his
-
-    # make dir for gradient flow
-    dir_grad_flow = os.path.join(res_path, 'grad_flow')
-    if not os.path.exists(dir_grad_flow) and settings['verbose']:
-        os.makedirs(dir_grad_flow)
-    train_params['dir_grad_flow'] = dir_grad_flow
 
     # ---------------- Training ---------------------------------------
     start_init = time.time()
@@ -100,7 +86,7 @@ def do_run(settings):
     print(f'Train loss: {losses[0][-1]:.4f}, Test loss: {losses[1][-1]:.4f}  '
           f'Time: {int(hours):0>2}:{int(minutes):0>2}:{seconds:05.2f}')
 
-    # add runtime of training to parameters
+    # add runtime to parameters
     file = open(os.path.join(res_path, 'parameters.txt'), 'a')
     file.write(f'Time: {int(hours):0>2}:{int(minutes):0>2}:{seconds:05.2f}\n')
     file.close()
@@ -132,7 +118,7 @@ def do_run(settings):
     torch.cuda.empty_cache()
 
 
-# Give do_expermients parameters to pass from yaml to use bash script for conducting experiments
+# Give do_experiments parameters to pass from yaml to use bash script for conducting experiments
 def do_experiments(input_params):
     num_experiments = input_params['num_experiments']
     pool_epoch = input_params['epochs']
@@ -167,7 +153,7 @@ def do_experiments(input_params):
         distance = set_distance(input_params['objective'][0], dfm, SSD, omega, m, grid.getSpacing(),
                                 grid.getCellCentered())
 
-        # newly created objective (combination of distance and reg/ should be separated for networks)
+        # objective (combination of distance and reg/ should be separated for networks)
         fcn = ObjectiveFunction(distance, regularizer, input_params['solver_reg'][1])
 
         # params for inner objective (registration)

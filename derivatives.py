@@ -2,8 +2,6 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from grids import Grid
-
 
 def second_order_derivative_conv(uc, h):
     B, C, H, W = uc.size()

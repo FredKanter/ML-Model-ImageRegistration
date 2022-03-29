@@ -1,10 +1,7 @@
 import torch
-from torch.nn import functional as F
-import matplotlib.pyplot as plt
 import itertools
 
 from interpolation import set_interpolater
-import tools
 import batch_calculation as bc
 
 
@@ -102,7 +99,6 @@ class NPIR(DistanceFunction):
         h = h.to(R.device)
         rot_xc = bc.batch_apply(deformation, w, xcs.shape, xcs, omega)
 
-        # inter = set_interpolater('linearFAIR', omega[0], m, h)
         Ty = self.inter.interpolate(T, rot_xc)
 
         # cuda support shift Ty and h to device

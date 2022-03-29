@@ -1,11 +1,8 @@
-import os
 import torch
 import time
 import warnings
-import numpy as np
 
 import batch_calculation as bc
-from save_results import write_csv_file
 
 
 def limited_bfgs(fctn, yc, H0, mode='train', timed=False, **kwargs):

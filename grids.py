@@ -2,9 +2,6 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
-import math
-
-import image_registration.reg_utils
 
 
 class Grid:
@@ -18,6 +15,7 @@ class Grid:
     @property
     def omega(self):
         return self._omega
+
     @omega.setter
     def omega(self, v):
         self._omega = v
@@ -25,6 +23,7 @@ class Grid:
     @property
     def m(self):
         return self._m
+
     @m.setter
     def m(self, v):
         self._m = v
@@ -61,18 +60,8 @@ class Grid:
 
         return grid_out
 
-    def torchGrid(self, input, field):
-        omega = self._omega
-        m = self._m
-
-        B = input.size()[0]
-        mtx = torch.eye(2, 3).unsqueeze(0).repeat(B, 1, 1)
-
-        return F.affine_grid(mtx, field.size())
-
     # adapt to torch and use own interpolation
     def __prolong_restrict_image(self, data, batchsize, factor, flag, method):
-        omega = self._omega
         m = self._m
         if flag == 'restrict':
             q = m / factor
@@ -151,11 +140,9 @@ def scale_to_gridres(xc, xcRef, m_xc, m_xcRef):
 
 
 def plot_grid_fair(xc, image, p, omega, stride=1, alpha=0.8, cmap='gray', lineColor='magenta', lineWidth=0.5):
-    # 'darkmagenta'
     Y = xc.cpu()
 
     # add own slicing so that grid is shown for height and width
-    # Do not scale our grids, since we do not get displacement field u but grid + displacement
     Y1 = Y[0, 0, :, :]
     Y2 = Y[0, 1, :, :]
 
@@ -170,7 +157,6 @@ def plot_grid_fair(xc, image, p, omega, stride=1, alpha=0.8, cmap='gray', lineCo
     ax.axis('off')
     if not (image is None):
         ax.imshow(p.detach().numpy(), extent=omega, alpha=alpha, cmap=cmap)
-        # plt.imshow(image.detach().numpy(), extent=omega, alpha=alpha, cmap=cmap)
     ax2 = fig.add_subplot(1, 2, 2)
     ax2.imshow(image.detach().numpy(), extent=omega, alpha=alpha, cmap=cmap)
     ax2.axis('equal')

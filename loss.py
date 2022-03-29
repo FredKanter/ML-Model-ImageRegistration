@@ -1,9 +1,5 @@
 import torch
 import itertools
-import matplotlib.pyplot as plt
-
-from grids import Grid, reshape_grid
-from derivatives import first_order_derivative_conv
 
 import batch_calculation as bc
 
@@ -46,25 +42,6 @@ class Loss:
 
     def torch_loss(self, gt, pred, h):
         return torch.sum((self.obj(gt, pred) * torch.prod(h, dim=-1)), dim=[-2, -1]).mean()
-
-    def plot_loss(self, wk, wmin, objfct):
-        if self.verbose:
-            obj = self._set_objective()
-
-            deformation, xcs, omega, h = self._prep_deform(wk, objfct)
-
-            wk_xc = bc.batch_apply(deformation, wk, xcs.shape, xcs, omega)
-            wmin_xc = bc.batch_apply(deformation, wmin, xcs.shape, xcs, omega)
-
-            # plot loss per sample in batch
-            fig = plt.figure()
-            plt.plot(torch.sum((obj(wk_xc, wmin_xc) * torch.prod(h, dim=-1)), dim=[-2, -1]).detach().cpu().numpy(), 'x')
-            plt.title('Loss values')
-            plt.xlabel('Sample n')
-            plt.ylabel(self.objective)
-            return fig
-        else:
-            return plt.figure()
 
     @staticmethod
     def _prep_deform(x_k, objfct):

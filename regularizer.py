@@ -1,10 +1,8 @@
 import torch
-import math
 
 from derivatives import second_order_derivative_conv, second_order_derivative_conv3d
-from grids import Grid, reshape_grid
-
-import image_registration.reg_utils.deformations as deform
+from grids import reshape_grid
+import deformations as deform
 
 
 class Regularizer:
@@ -63,7 +61,6 @@ class Curvature(Regularizer):
     def evaluate(self, xc, **kwargs):
         xc = self.convert_to_grid(xc)
         xc = self.resize_grid(xc)
-        # let ld be laplace operator ld f = d11 f + d22 f, if f in R2
         gridsize = xc.size()
         B = gridsize[0]
 
@@ -78,7 +75,7 @@ class Curvature(Regularizer):
             devs = self.calc_dev(uc, h)
             L = torch.sum(torch.sum(torch.stack(devs, dim=0), dim=0)**2, dim=1)
         else:
-		raise RuntimeError('Mode has to be conv')
+            raise RuntimeError('Mode has to be conv')
 
         L = torch.sum(L, dim=[d.item() for d in torch.arange(-self.dims, 0)])
 

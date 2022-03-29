@@ -1,22 +1,16 @@
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 import math
 import torch
 import torch.nn.functional as F
-import h5py
-import datetime
-from PIL import Image
 import warnings
 from scipy.interpolate import Rbf
 import scipy
 
-import image_registration.reg_utils.tools as tools
+import tools as tools
 from grids import Grid, scale_grid, plot_grid_fair, reshape_grid
 from deformations import set_deformation
 from interpolation import set_interpolater
-from visualization import construct_large
-# from save_results import write_file
 
 
 class DataCreator:
@@ -60,9 +54,8 @@ class DataCreator:
                 # transform image for supervised learning
                 inter = set_interpolater('linearFAIR', self.omega, self.m, self.h)
                 imgR = [*imgR, inter.interpolate(cimg, xc).squeeze()]
-                if not image_pairs:
-                    # add noise to grid to create two different images/ image grid
-                    imgT = [*imgT, add_noise(cimg, self.params['noise_level'], invert)]
+                # add noise to grid to create two different images/ image grid
+                imgT = [*imgT, add_noise(cimg, self.params['noise_level'], invert)]
 
                 if verbose:
                     B, C, HW = xc.shape
@@ -74,12 +67,10 @@ class DataCreator:
         return torch.stack(xmin), torch.stack(x0), torch.stack(imgT), torch.stack(imgR)
 
     def create_params(self):
-        # should be unique for each type of param creation (affine, nonpara)/ default non para
+        # unique for each type of param creation (affine, nonpara)
         reduction = self.reduction
-        # ratio_random = int(self.params['ratio'])
         spacing_factor = self.params['spacing_factor']
         xc = self.grid.getCellCentered().clone()
-        # xc_t = xc.clone()
 
         m = min(self.m).item()
         max_reduction = math.ceil(math.log2(m)) - 1
@@ -128,7 +119,6 @@ class DataCreator:
         # rescale to full size and return params
         xc_gt = scale_grid(xc_gt, q, self.m)
         min_params = (xc_gt - xc).flatten(-len(self.m), -1).squeeze()
-        # TODO Enable small grids for full size images / gutils.scale_grid(w, m_old, m_new) -  only on start-params
         start_params = torch.zeros(xc.flatten(-len(self.m), -1).squeeze().shape, dtype=xc.dtype)
 
         return min_params, start_params, xc_gt.clone()
@@ -198,7 +188,6 @@ def init_generator(name, num_items, path, omega, params):
 def normalize_img(img):
     norm_fac = torch.std(img)
     return (img - torch.mean(img)) / norm_fac
-    # for MIDL22 return to 'insufficient' norm by std
     # return img / norm_fac
 
 
@@ -214,11 +203,9 @@ def masking(cimg, invert=False):
 
 def add_noise(img, noise_lvl, invert):
     mask = masking(img, invert=invert)
-    # tools.normalize(img + torch.normal(0, torch.mean(img).item() / params['noise_level'], size=img.shape) * mask)
     if noise_lvl == 0:
         noise_lvl = 1
         raise ZeroDivisionError(f'Noise lvl is {noise_lvl}. Set to 1')
-    # mean is zero for new normalization, find new way to create noise in dependence on data
     noise_img = img + torch.normal(0, torch.var(img).item() / noise_lvl, size=img.shape) * mask
 
     # keep background by cut-off normalization and not normalizing through min/max ratio

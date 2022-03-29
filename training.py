@@ -1,13 +1,11 @@
 import torch
 from torch.utils import data
-from torch.utils.tensorboard import SummaryWriter
-import os
 import numpy as np
 from collections import OrderedDict
 
-from models_reg import init_model, MyDataParallel
-from loss_func import set_loss, Scheduler
-from reg_utils.tools import freeze_layer, unfreeze_layer, get_lr, prep_model_func
+from models import init_model, MyDataParallel
+from loss import set_loss, Scheduler
+from tools import freeze_layer, unfreeze_layer, get_lr, prep_model_func
 from setup_data import HdfDataset, set_generator
 import tools as tools
 
@@ -64,17 +62,6 @@ def train(parameter, restart=False, verbose=False):
     parameter['paraDim'] = next(iter(data.DataLoader(train_set,
                                                      **{'batch_size': 1, 'shuffle': True})))[0].to(parameter['device'])
     model = init_model(parameter['model'], **parameter)
-    # train from best checkpoint from other model
-    if parameter['snapshot'][0]:
-        state = torch.load(os.path.join(parameter['snapshot'][1], 'model_best.pth.tar'))
-        # check if module is prefix in state dict
-        if all(['module' in key for key in list(state['state_dict'].keys())]):
-            state = remove_DataParallel(state)
-        # set state loding function to newly create checkpoint state dir
-        torch.save(state, os.path.join(parameter['dir_checkpoints'], 'model_best.pth.tar'))
-        print(f"---- Use snapshot from {parameter['snapshot'][1]} ----")
-        model = tools.load_checkpoint(parameter['dir_checkpoints'], 'train', model)
-
     checkpoint = {}
 
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=parameter['lr'])
@@ -109,14 +96,8 @@ def train(parameter, restart=False, verbose=False):
     lr = parameter['lr']
     print(f'\nStart Training: Epochs={epochs}, LR={lr}')
 
-    path_pieces = parameter['dir_checkpoints'].split('/')
-    writer = SummaryWriter(os.path.join('/results', 'tensorboard', path_pieces[2], path_pieces[3]))
-
     nb_layer_blocks = parameter['num_layer'] if isinstance(model.sb, torch.nn.ModuleList) else len(model.sb._modules)*parameter['num_layer']
     train_loss, val_loss, running_train, running_val = [], [], [], []
-    train_objective, val_objective = [], []
-    his_bc_fks, his_bc_gk, his_grad_flow = [], [], []
-    iterates, minimizers = [], []
 
     for epoch in range(parameter['epochs']):
         if restart and epoch % parameter['freeze'][1] == 0 and epoch > 0:
@@ -148,12 +129,6 @@ def train(parameter, restart=False, verbose=False):
             optimizer.step()
 
             running_train.append(loss.item())
-            writer.add_scalar("train/step_loss", loss.item(), epoch * len(train_gen) + len(running_train))
-
-            # add objective energy to tensorboard
-            writer.add_scalar('train/step_energy', fks[-1].mean().item(), epoch * len(train_gen) + len(running_train))
-            train_objective = [*train_objective, fks[-1].mean().item()]
-
 
         for v, vadds in val_gen:
             with torch.no_grad():
@@ -166,11 +141,6 @@ def train(parameter, restart=False, verbose=False):
                                   params_fct=vadds)
 
                 running_val.append(v_loss.item())
-                writer.add_scalar('val/step_loss', v_loss.item(), epoch * len(val_gen) + len(running_val))
-
-                # add objective for val set
-                writer.add_scalar('val/step_energy', vfks[-1].mean().item(), epoch * len(val_gen) + len(running_val))
-                val_objective = [*val_objective, vfks[-1].mean().item()]
 
         old_lr = get_lr(optimizer)
         if scheduler_on:
@@ -181,20 +151,11 @@ def train(parameter, restart=False, verbose=False):
         lr = get_lr(optimizer)
         if old_lr > lr:
             print(f'Learning Rate reduced to {lr}')
-        writer.add_scalar("lr", lr, epoch)
 
         train_loss.append(np.mean(running_train))
         val_loss.append(np.mean(running_val))
-        writer.add_scalar("train/mean_loss", train_loss[epoch], epoch)
-        writer.add_scalar('val/mean_loss', val_loss[epoch], epoch)
         running_train.clear()
         running_val.clear()
-
-        # add summed energy over all samples
-        writer.add_scalar('train/mean_energy', sum(train_objective)/len(train_objective), epoch)
-        writer.add_scalar('val/mean_energy', sum(val_objective)/len(val_objective), epoch)
-        train_objective.clear()
-        val_objective.clear()
 
         print(f'Epoch: {epoch + 1}   Train: {train_loss[epoch]:.5f}   Val: {val_loss[epoch]:.5f}')
 
@@ -208,8 +169,5 @@ def train(parameter, restart=False, verbose=False):
 
         tools.save_checkpoint(checkpoint, is_best, checkpoint_dir=parameter['dir_checkpoints'],
                               filename=f'checkpoint_e{epoch + 1}.pth.tar')
-
-    writer.flush()
-    writer.close()
 
     return model, [train_loss, val_loss]

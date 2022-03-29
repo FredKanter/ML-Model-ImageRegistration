@@ -1,32 +1,19 @@
 import torch
 import numpy as np
-import math
 from torch.utils import data
 from multiprocessing import Lock
-import pickle
 import os
 import h5py
-import datetime
-import matplotlib.pyplot as plt
-from PIL import Image, ImageOps
 from torchvision import transforms
 import random
 
-import image_registration.reg_utils.tools as tools
-from image_registration.reg_utils.grids import Grid
-from image_registration.reg_utils.deformations import set_deformation
-from image_registration.reg_utils.interpolation import set_interpolater
-from learn_optimization import object_functions as obFct
-from utils.save_results import write_file
-from image_registration.reg_utils.data import add_noise, init_generator, normalize_img, resize_image
+import tools as tools
+from grids import Grid
+from interpolation import set_interpolater
+from data import add_noise, init_generator, normalize_img, resize_image
 
 
 class OnFlyDataset(data.Dataset):
-    """
-    Data set to create deformation for image registration using scaling factor for larger deformations
-    Data should be created during training using seed point parameter
-    Define interval (tuple) with values for parameter used in deformation and [0-max], use scale to construct items
-    """
     def __init__(self, num_items, img_path, omega, dfm, dfm_params, noise=True, noise_level=3, invert=False):
         """
         :param BaseImg: image to create reference and be used as template (torch.tensor)
@@ -121,7 +108,7 @@ class Invert(object):
     def __call__(self, params):
         T, R = params['T'], params['R']
         no_invert = bool(random.getrandbits(1))
-        return {'T': self.__invert__(T, no_invert), 'R': self.__invert__(R,no_invert), 'x*': params['x*']}
+        return {'T': self.__invert__(T, no_invert), 'R': self.__invert__(R, no_invert), 'x*': params['x*']}
 
 
 class HdfDataset(data.Dataset):

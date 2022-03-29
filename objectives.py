@@ -1,5 +1,5 @@
-from image_registration.reg_utils.regularizer import Regularizer
-from image_registration.reg_utils.distances import DistanceFunction
+from regularizer import Regularizer
+from distances import DistanceFunction
 
 
 class ObjectiveFunction:

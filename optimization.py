@@ -5,15 +5,14 @@ import copy
 
 from armijo_BFGS import limited_bfgs
 import batch_calculation as bc
-import reg_utils.tools as tools
+import tools as tools
 from grids import Grid, prolong_grid, scale_to_gridres
 
 
 class Solver:
     def __init__(self, iterations, sparse, **kwargs):
         super(Solver, self).__init__()
-        # ml flag enables multi level solver/ no objective bound to solver, would result in less flexible solver/ pass
-        # objective with call (use object of objectives class)
+        # ml flag enables multi level solver
         self.iter = iterations
         self.sparse = sparse
         if 'ml_max_lvl' in kwargs.keys():
@@ -50,8 +49,6 @@ class GD(Solver):
 
     def solve(self, fng, x0, learn_param, timed=False, **kwargs):
         xk = x0
-        # pass function object and set to evaluation routine
-        # fng = fng.evaluate
         if isinstance(learn_param, torch.nn.ParameterList):
             step = learn_param[0]
         else:
@@ -89,9 +86,8 @@ class L_BFGS(Solver):
         # pass function object and set to evaluation routine
         Q = self._prepare_hessian(x0, learn_param)
 
-    	xk, fks, gks = limited_bfgs(fng, x0, Q, timed=timed,
-		**{'lr': self.lr, 'maxIter': self.iter, 'maxBFGS': self.maxBFGS, **kwargs})
-
+        xk, fks, gks = limited_bfgs(fng, x0, Q, timed=timed,
+                                    **{'lr': self.lr, 'maxIter': self.iter, 'maxBFGS': self.maxBFGS, **kwargs})
         return xk, fks, gks
 
     def _prepare_hessian(self, x0, learn_param):

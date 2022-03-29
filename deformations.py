@@ -1,11 +1,7 @@
 import torch
 import numpy as np
-import itertools
-import math
 
 import grids as gutils
-import batch_calculation as bc
-import tools
 
 
 class Deformation:

@@ -1,23 +1,14 @@
 import os
 import numpy as np
-import matplotlib.pyplot as plt
 from PIL import Image
-import nibabel as nib
+# import nibabel as nib
 import torch
-from matplotlib import pyplot
-from torch.utils import data
-import math
 import collections
 
-import deformations as deform
 from interpolation import set_interpolater
 from grids import Grid
-from visualization import plot_grad_flow, plot_his, plot_histo_grads
-
 import batch_calculation as bc
-import learn_optimization.evaluate as op_eval
-import batch_calculation as bc
-from save_results import save_to_disk
+from save_results import save_metrics
 
 
 def save_run(cfile, res_metrics, losses, data_set='test'):
@@ -54,7 +45,7 @@ def save_run(cfile, res_metrics, losses, data_set='test'):
                     ['iterates_combined', 'diffs_combined', 'fx_ratio_combined', 'loss_ratio_combined',
                      'times_combined', 'energies_combined'])
 
-    op_eval.save_metrics(out_file, results)
+    save_metrics(out_file, results)
 
 
 def save_checkpoint(state, is_best, checkpoint_dir, filename='checkpoint.pth.tar', only_best=True):
@@ -65,7 +56,7 @@ def save_checkpoint(state, is_best, checkpoint_dir, filename='checkpoint.pth.tar
 
 
 def load_checkpoint(filepath, mode='train', *args):
-    # can not use load_checkpoints, since it is not yet possible to pickle ml_solver wraper
+    # can not use load_checkpoints, since it is not yet possible to pickle ml_solver wrapper
     checkfiles = [c for c in os.listdir(filepath)]
     if 'model_best.pth.tar' in checkfiles:
         best_file = 'model_best.pth.tar'
@@ -142,8 +133,8 @@ def load_images(path, dtype=torch.double):
         raise NameError(f'{path} does not exists')
 
     # do not pass suffix but get it from files, raise error if multiple data types exist
-    func_dict = {'jpg': lambda file: torch.tensor(np.array(Image.open(file), dtype=np.float), dtype=dtype),
-                 'gz': lambda file: torch.tensor(nib.load(file).get_fdata(), dtype=dtype)}
+    func_dict = {'jpg': lambda file: torch.tensor(np.array(Image.open(file), dtype=np.float), dtype=dtype)}
+                 # 'gz': lambda file: torch.tensor(nib.load(file).get_fdata(), dtype=dtype)}
     files = [os.path.join(path, f) for f in sorted(os.listdir(path)) if os.path.isfile(os.path.join(path, f))]
     suffixes = set([f.split('.')[-1] for f in files])
     if not len(suffixes) == 1:
@@ -230,45 +221,6 @@ def unfreeze_layer(model, indx, reset=True):
                 param.requires_grad = False
 
 
-def verbose_tracker(model, wk, adds, fks, gk, his_grad_flow, his_bc_fks, his_bc_gk, iterates, minimizers,
-                    full_mode=False):
-    his_grad_flow = [*his_grad_flow, plot_grad_flow(model.named_parameters())]
-    # save history of solver iterations
-    if full_mode:
-        # full mode is very memory expensive and should be only used for small samples and visualization purposes
-        iterates = [*iterates, wk[-1].detach().cpu()]
-        minimizers = [*minimizers, adds['x*'].detach().cpu()]
-        his_bc_fks.append(torch.mean(torch.stack(fks), dim=1).detach().cpu())
-        his_bc_gk.append(torch.mean(torch.stack(gk), dim=1).detach().cpu())
-    return his_grad_flow, iterates, minimizers, his_bc_fks, his_bc_gk
-
-
-def verbose_plotter(parameter, lobj, epoch, gk, his_grad_flow, his_bc_fks, his_bc_gk, iterates, minimizers,
-                    full_mode=False):
-    stack2list = lambda stack: [stack[x] for x in range(stack.shape[0])]
-    # plot gradient flow per epoch
-    for ii, flow_fig in enumerate(his_grad_flow):
-        save_to_disk(flow_fig, f'grad_flow_e{epoch}_{ii}', parameter['dir_grad_flow'])
-
-    if full_mode:
-        # save history of solver
-        his = plot_his(stack2list(torch.mean(torch.stack(his_bc_fks), dim=0)),
-                       stack2list(torch.mean(torch.stack(his_bc_gk), dim=0)),
-                       f'Training history epoch {epoch}')
-        save_to_disk(his, f'his_plot_ep{epoch}', parameter['dir_his'])
-
-        # save gradients of iterates / how to display? how deal with loop in data loader ? show just last batch
-        for ii, grad_histo in enumerate(plot_histo_grads(gk)):
-            save_to_disk(grad_histo, f'grad_histo_{ii}', parameter['dir_grad_flow'])
-
-        # plot loss values
-        loss_fig_dir = os.path.join(parameter['dir_his'], 'loss')
-        if not os.path.exists(loss_fig_dir):
-            os.makedirs(loss_fig_dir)
-        save_to_disk(lobj.plot_loss(torch.cat(iterates, dim=0), torch.cat(minimizers, dim=0), parameter['objFct']),
-                     f'sample_losses_{epoch + 1}', loss_fig_dir)
-
-
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
@@ -283,30 +235,6 @@ def prep_model_func(param):
     else:
         func_list = [bc.auto_gradient_batch(dist.evaluate), bc.auto_gradient_batch(reg.evaluate)]
     return func_list
-
-
-def getOmega(m, h=1, invert=False, normalize=False):
-    tmp = np.zeros((len(m), 2))
-    msize = len(m)
-    tmp[:, 1] = h * m
-
-    if invert:
-        omega = tmp.reshape(2 * msize)
-        omg = omega.copy()
-        omega[0] = omg[2]
-        omega[1] = omg[3]
-        omega[2] = omg[0]
-        omega[3] = omg[1]
-    else:
-        omega = tmp.reshape(2 * msize)
-
-    if normalize:
-        # set omega to torch standard interval (hard coded)
-        tmp[:, 0] = -1
-        tmp[:, 1] = 1
-        omega = tmp.reshape(2 * msize)
-
-    return torch.tensor(omega, dtype=torch.int32)
 
 
 def getMultilevel(image, omega, m, batchsize, method='linearFAIR', maxLevel=torch.tensor(7), minLevel=torch.tensor(4)):
