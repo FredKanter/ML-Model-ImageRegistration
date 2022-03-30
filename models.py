@@ -215,7 +215,8 @@ class BaseNet(nn.Module):
         self.non_para = isinstance(fcn_object.dist, dist.NPIR)
 
         # define common layers
-        in_affine = self.dimOut * (1 + 2*len(fcn_grad))
+        # in_affine = self.dimOut * (1 + 2*len(fcn_grad))
+        in_affine = self.dimOut * len(fcn_grad)
         if self.non_para:
             self.fuse_layer = FuseLayer(len(fcn_grad), self.imgDims, 1, 1)
             self.hidden_sz = (self.fuse_layer.calc_conv(self.imgSz) ** self.imgDims) * self.imgDims
@@ -249,8 +250,8 @@ class BaseNet(nn.Module):
         if self.normalize:
             (gk, gk_norm), (fk, fk_norm) = preprocess_input(xk, gk, fk)
 
-        x = torch.cat((xk, gk, fk), 1)
-        # x = gk
+        # x = torch.cat((xk, gk, fk), 1)
+        x = gk
 
         # if fused layer in network (npir approaches), reshape data to fit 2D conv on grid, grads and fcts
         if self.non_para:
@@ -298,7 +299,7 @@ class MetaNet(BaseNet):
         super(MetaNet, self).__init__(x, fcn_grad, k_iter, num_layers, block_name, fcn_object, normalize, dtype)
         # create one class to ensemble all solver blocks / pass list of functions to combine in model (e.g distance/reg)
         self.name = f'Meta-{block_name}'
-        self.block_moduls = {'LSTMNet': LSTMNetBlock, 'GRUNet': GRUNetBlock, 'DenseNet': DenseBlock}
+        self.block_moduls = {'LSTMNet': LSTMNetBlock}
         if block_name not in self.block_moduls.keys():
             raise RuntimeError(f'{block_name} is not implemented base block')
         else:

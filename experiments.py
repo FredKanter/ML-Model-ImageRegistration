@@ -109,7 +109,7 @@ def do_run(settings):
               'Mean_Loss (learn)': torch.mean(torch.stack(res_metrics['Diff'][1])[:, -1]).item(),
               'Mean Energy (plain)': torch.mean(res_metrics['Instance_energy'][0][:, -1]).item(),
               'Mean Energy (learn)': torch.mean(res_metrics['Instance_energy'][1][:, -1]).item()}
-    to_csv('/results', [params], settings['name_csv'])
+    to_csv(settings['results'], [params], settings['name_csv'])
 
     # write metrics to disk
     tools.save_run(res_path, res_metrics, losses)

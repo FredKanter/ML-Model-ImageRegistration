@@ -190,8 +190,7 @@ class ML_wrapper(Solver):
                 level_param = tools.create_h0(w, bc.auto_gradient_batch(fng.evaluate), **{'T': in_params['T'],
                                                                                           'R': in_params['R']})
 
-            wk, fwk, gwk = self.sol.solve(fng, w, level_param, mode=kwargs['mode'], timed=timed,
-                                          params_fct=in_params, protocol=kwargs['protocol'])
+            wk, fwk, gwk = self.sol.solve(fng, w, level_param, mode=kwargs['mode'], timed=timed, params_fct=in_params)
 
             # return time for whole ML routine
             fwk_t = add_times(fwk_t, fwk)

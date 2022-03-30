@@ -1,5 +1,6 @@
 from regularizer import Regularizer
 from distances import DistanceFunction
+from interpolation import set_interpolater
 
 
 class ObjectiveFunction:
@@ -43,6 +44,7 @@ class ObjectiveFunction:
         self.dist.h = self.h
         self.dist.gridRef = self.gridRef
         self.dist.m = m
+        self.dist.inter = set_interpolater('linearFAIR', omega, m, h)
 
         if self.reg is not None:
             self.reg.h = self.h
