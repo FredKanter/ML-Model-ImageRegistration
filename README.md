@@ -3,12 +3,12 @@ Code published in context of MIDL 2022
 
 ## Toolbox
 This is a minimal version of our unFAIR toolbox which is intended to close the gap between conventional gradient-based
- optimization methods and neural networks in the context of image registration. It is a python and pytorch based
+ optimization methods and neural networks in the context of image registration. It is a Python and Pytorch-based
  framework in development.
  
 ## Requirements
-In order to use our toolbox, you need python 3.5 or newer.
-The following packages are needed (we make use of a docker enviroment. The package versions are indicated in the
+To use our toolbox, you need Python 3.5 or newer.
+The following packages are needed (we make use of a docker environment. The package versions are indicated in the
 brackets):
 - pytorch       (1.3.1)
 - pillow        (9.4.0)
@@ -22,14 +22,14 @@ brackets):
 
 ## Data
 Images for on-the-fly data generation are provided in images.zip for all data sets mentioned in the paper. Testing
-requires HDF file with ground-truth deformations. Sample data to test full pipeline can be found in minimal_example.zip.
+requires HDF file with ground-truth deformations. Sample data to test the full pipeline can be found in minimal_example.zip.
  
     
 ## Documentation
 There is no documentation available yet. This version contains reduced visualization and tracking options. Commonly
-used methods such as Tensorboard are provided in the full version and will be shared later on.
+used methods such as Tensorboard are provided in the full version.
 
-NOTE: Minimal version not extensively tested. In case of problems please contact the author.
+NOTE: Minimal version not extensively tested. In case of problems please get in touch with the author.
 
 ## Author
 Frederic Kanter, Institute of Mathematics and Image Computing, University of Lübeck, Germany
